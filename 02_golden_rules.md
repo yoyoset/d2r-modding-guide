@@ -38,16 +38,20 @@ entry["bnCN"] = entry["zhCN"]   # CN 客户端读这个（极重要）
 
 ---
 
-## 3. 防闪退红线（碰了 CN 必崩）
+## 3. 防闪退红线（国服三大故障模式）
 
-| 红线 | 后果 | 正确做法 |
+> 国服出问题只有三种，**对症排查**。完整版见 **`06_china_server_and_crash_safety.md`**。
+
+| 故障 | 触发 | 正确做法 |
 | --- | --- | --- |
-| 打包自定义 `.model`（3D 顶点文件） | CN 启动 ~20s 无日志闪退 | 编译末步递归删除 `data/hd/character` 下所有 `.model` |
-| 覆盖佣兵 `act*hire.json` | CN 闪退 | 不打包佣兵配置文件 |
-| 覆盖 `levels.txt` / `levels.bin`（结构） | 进特定地图瞬间崩 | 地图名只在 `levels.json` 改，**绝不**动结构 txt |
-| 修改 `texture_desc_cache.json` | CN DX12 崩溃 | 不碰 |
-| 字符串条目**缺 `id` 字段** | 启动 ~20s 无日志闪退 | 每条必须有 id；新增条目从权威源取真实 id，自定义用项目约定高位段 |
-| 覆盖 `skills.txt`/`uniqueitems.txt`/`runes.txt` 结构 | 找不到 ID 崩 | 优先注入式追加，勿整文件物理覆盖；必要时先用最新 CASC 解包对齐 |
+| **卡"正在读取"** | 字符串缺 `sgCN`/`bnCN`（最常见）；`texture_desc_cache.json`（加载4+分钟）；`character/**/*.model`、`character/enemy/*hire.json`（结构禁止）；版本号不符 | 补三字段；删这些文件；对齐版本号 |
+| **启动~20s 无日志崩溃** | 字符串条目**缺 `id` 字段** | 每条必须有 id，自定义用 vanilla 最大值之上的高位段 |
+| **进游戏 DX12 DeviceLost** | mod 引用了**被国服和谐替换的美术资产**（`lit_mesh/bonearmor/`、`objects/shrines_other/` 等），顶点格式不兼容 | 删 mod 内引用这些路径的 JSON（blz-log 搜 `Mesh vertex format invalid`） |
+
+> 🛑 **常见误区纠正**（社区联机验证）：
+> - `data/global/excel/*.txt` 在 `-mod` 模式**在线可用**，**不是**闪退原因。数值改动的风险是 **TOS 封号**，不是崩溃。
+> - 只有 `character/**/*.model` 禁止；`env/model/**/*.model` **安全**。
+> - 地图名改 `levels.json`（字符串）即可，安全。
 
 ---
 

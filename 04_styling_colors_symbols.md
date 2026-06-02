@@ -71,7 +71,29 @@ def colorize(text, color):                   # color 如 '\xffc1'
 
 ---
 
-## 4. 百科/配方排版规范
+## 3.4 地面标签颜色（D2R 内置，非 loot filter）
+有孔/无形/各品质物品的**地面标签颜色**由 `_profilehd.json` 的 `TooltipStyle` 控制，是**引擎内置功能**，无需 loot filter 规则：
+```
+_profilehd.json → "TooltipStyle" → {
+  "SocketedColor": "$FontColorLightPurple",   有孔=紫红
+  "EtherealColor": "$FontColorLightTeal",     无形=青
+  "DefaultColor/MagicColor/RareColor/SetColor/UniqueColor/CraftedColor"... 都可改
+}
+```
+> 有孔+无形同时 → D2R 默认优先显示有孔色。若标签显示灰色，多半是被设成了 `$FontColorGrey`。
+
+---
+
+## 4. 字体合并（cmap 劫持，给字库塞自定义图标）
+D2R 中文字体码表狭隘。要用大量自定义图标，把图标字体的字形**合并进中文主字体**：
+- **原理（cmap hijacking）**：把"未使用的 Unicode 码点"在字体里重绘为矢量图标，字符串里写该码点即显示图标。
+- **UPM 缩放（关键坑）**：不同字体 Units-Per-Em 不同，直接复制字形会大小错乱。合并时按 `factor = 目标UPM / 源UPM` 等比缩放字形坐标与 metrics。（如源 UPM 256→目标 1000，factor≈3.906；源 1024→1000，factor≈0.9766）
+- **图标识别**：图标字形通常宽度 = UPM（正方形）。
+- **冲突区**：图标一般占数学符号/带圈数字/全角/制表符等不常用区段，作为游戏专用字体可接受覆盖。
+- ⚠️ **具体"图标↔码点"映射是字体包专属的**（不同 mod 的合并字体映射不同），不要跨字体套用；以你实际字体的字形为准，用 fontTools 查 cmap + 字形宽度确认。
+- 工具：fontTools.ttLib 遍历源 cmap、按宽度筛图标、缩放后写入目标 cmap（新增+覆盖）。
+
+## 5. 百科/配方排版规范
 - 数量用乘号 `×`，方向用箭头 `→`（禁用 `x` / `->`）。
 - 过长说明用 `\n` 换行，续行可缩进对齐。
 - 高亮材料名末尾 `ÿc0` 闭合，防止污染后续行。

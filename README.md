@@ -24,9 +24,13 @@ D2R mod 看似改几个 json，实则有一堆"凭直觉必翻车"的坑：改�
 | 文档 | 内容 | 何时读 |
 | --- | --- | --- |
 | [`01_mod_anatomy.md`](01_mod_anatomy.md) | **Mod 全景图**：三层结构(文本/UI/美术) + 读取顺序 + 客户需求→文件映射 | 接手任何 mod 第一篇 |
-| [`02_golden_rules.md`](02_golden_rules.md) | **铁律**：CN 读取优先级 + 防闪退红线 + 三字段同步 | 动手改之前必读 |
+| [`02_golden_rules.md`](02_golden_rules.md) | **铁律**：CN 读取优先级 + 防闪退三故障模式 + 三字段同步 | 动手改之前必读 |
 | [`03_data_sop_and_codes.md`](03_data_sop_and_codes.md) | **标准数据获取流程** + 物品代码/ID 参考 + 反直觉怪癖 | 要改名/加条目时 |
 | [`04_styling_colors_symbols.md`](04_styling_colors_symbols.md) | 颜色语义表 + 字体安全符号 + 描述染色/星级**方法** | 做 loot 染色/tooltip 美化时 |
+| [`06_china_server_and_crash_safety.md`](06_china_server_and_crash_safety.md) | **国服完全指南**：locale + 和谐 + 三大故障模式 + 文件安全表 + 国际→国服转换 SOP | 做国服 mod / 排查闪退时 |
+| [`07_ui_layouts_and_overlays.md`](07_ui_layouts_and_overlays.md) | **UI 手册**：面板注册真相 + 消息路由 + Widget/Panel + 信息展示 + 覆盖特效 + 多 mod 兼容 | 改面板/HUD/加按钮/做特效时 |
+| [`08_new_mod_skeleton.md`](08_new_mod_skeleton.md) | **从零搭建**：目录/modinfo/版本/启动/字符串/面板自动注册/验证清单 | 起一个全新 mod 时 |
+| [`09_game_mechanics_reference.md`](09_game_mechanics_reference.md) | 游戏机制参考：FCR/FHR 断点 + 打孔 + 超强 + CB/DS/破免（支撑染色/平衡决策）| 做 loot 染色/平衡/词典时 |
 | [`05_rotw_dlc_reference.md`](05_rotw_dlc_reference.md) | 2026《术士君临》DLC 事实参考（新职业/符文之语/魔典） | 适配新版本时 |
 | [`tools/`](tools/) | 可复用脚本（路径需自填） | 自动化提取/校验 |
 
