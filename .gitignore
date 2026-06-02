@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# 本工具生成的存档（按需本地生成，不入库；避免把特定版本数据固化进通用库）
+ref_item_codes_ids.md
+*.local.md
+
+# 编辑器/系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
