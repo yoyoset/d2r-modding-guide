@@ -163,3 +163,70 @@ D2RMM.writeJson('global\\ui\\layouts\\hudpanelhd.json', hud);
 ```
 - 同理 `_profilehd.json` 只**追加**变量、`item-names.json` 只**改命中条目**，多 mod 才能共存。
 - 手柄模式读 `layouts/controller/`，键鼠 HUD 的注入在手柄下不生效，需单独注入。
+
+---
+
+## 14. 可滚动「图标+表格」词典面板标准（Tab 壳 + 子面板）
+
+> 自建词典/配方面板（方块配方、符文之语等）的完整可渲染标准。来自 D2R 原生 `itemdictionarycuberunegempanelhd`/`itemdictionaryrunewordpanelcn*` 逐字段实证（2026-06）。**踩过的坑都在这。**
+
+### 14.1 🔴 铁律：TableWidget 内容行的 `name` 必须用引擎识别值，否则整行不渲染
+
+D2R 的 `TableWidget`（在 `SettingsPanel`/`VideoOptionsPanel` 内）**只渲染 `name` 被引擎识别的 `TableRowWidget`**。这是最大的坑：结构、坐标、贴图全对，但行 `name` 自创 → **该行完全不显示**（连文字都没有），且**不报错**。
+
+| 行用途 | **必须**的 `name` |
+| --- | --- |
+| 章节标题行（带分隔线） | `"Row Gameplay Options"` |
+| 内容行（图标/文字/配方） | `"Row ItemNameDisplayMode"` |
+| 说明/注释行 | `"Row CubeRecipeDescription"` / `"Row RunewordDescription"` |
+
+> 实测：自创 `name:"Row CubeRecipe"` → 表格只显示标题行，所有配方行空白。改成 `"Row ItemNameDisplayMode"` 后立即全部渲染。**别自创行名。**
+
+### 14.2 面板外壳（VideoOptionsPanel + 原生滚动）
+
+```
+VideoOptionsPanel {priority:9003, rect:"$OptionsPanelRect", anchor:{x:0.5}, applySettingsImmediately:false}
+ ├ ImageWidget "ScrollBarBackground" {rect:"$OptionsScrollBarBackgroundRect", anchor:{x:1.0}, filename:"PauseMenu\\VerticalScroll"}
+ │   └ ScrollControllerWidget "ScrollController" {rect:"$OptionsScrollBarRect", viewName:"ScrollView", 上/下箭头/bar filepath}
+ └ ScrollViewWidget "ScrollView" {fitToParent:true, scrollControllerName:"ScrollController"}
+     └ TableWidget "OptionsTable" {columns:[{width,alignment:{h:fit,v:fit}}...], rowHeight:"$OptionsTableRowHeight"(=100)}
+         └ TableRowWidget...（见 14.1）
+```
+- `rowHeight` 用 `$OptionsTableRowHeight`(=100) 即可，**不要自己塞 0/变量未定义**；行高有效后内容才不被裁。**内容坐标全部 ≤ 行高**（图标 y≈48-54、分隔 y≈58）。
+- 列按 `TableRowWidget.children` **顺序映射**：children[0]→列1，[1]→列2…
+
+### 14.3 行内 widget（图标/文字/分隔）
+
+一个内容行 = `TableRow "Row ItemNameDisplayMode"` → 每列一个 `Widget` 容器 → 内部 widget 用**绝对 rect{x,y}** 摆放（原生就是这么干，可靠）：
+- **物品图标**：`ButtonWidget {rect:{x,y,scale}, filename:"items/misc/gem/ruby"|"items/misc/rune/el_rune"|"items/armor/boot/...", tooltipString:名/@token, pressedFrame:0}`
+  - `scale` 调图标大小（原生 0.75；嫌大用 0.6 左右）。**`scale` 写在 `rect` 内**：`rect:{x,y,scale:0.62}`（合法，原生分隔符就这么用）。
+  - 物品图标路径怪癖：普通宝石是裸名 `gem/ruby`（**非** `normal_ruby`）；蓝宝石 `saphire`（拼写）。
+- **文字**：`TextBoxWidget {fitToText:true, rect:{x,y}, text, style}`。
+- **分隔符**：`ImageWidget {rect:{x,y,scale:0.6}, filename:"itemDictionary/cubehelp_plus"|"cubehelp_equal"}`。
+- **混排防重叠**：图标宽度固定、文字宽度可变。用**流式 x 光标**按每项真实宽度推进（CJK≈30px/字、图标≈缩放后宽），别用固定槽位——否则长文字压住后面的图标（实测过）。
+
+### 14.4 文字上色（按品质）
+
+- ⚠️ `ÿc` 颜色码在 layout 的 TextBox `text` 里**不解析**（见 §8）。上色只能靠 `style` 的 `fontColor`。
+- 做法：往 `_profilehd.json` **追加**带色样式（只追加新 key）：
+  ```json
+  "StyleCubeGold": { "fontColor": "$FontColorGoldYellow", "pointSize": "$MediumFontSize", "alignment": {"h":"left","v":"center"} }
+  ```
+- 品质色参考引擎自带：暗金/任务=`$FontColorGoldYellow`，稀有=`$FontColorYellow`，魔法=`$FontColorBlue`，套装=`$FontColorGreen`，手工=`$FontColorOrange`。
+
+### 14.5 Tab 壳主面板
+
+```
+SettingsPanel {priority:9002, fitToParent:true}
+ ├ RectangleWidget "Background" {fitToScreen, color:[0,0,0,0.7]} → ClickCatcher + Anchor(背景图 FrontEndOptionsBG + Title + CloseButton)
+ ├ ImageWidget "SettingsBackground" {rect:"$SettingsPanelBackgroundRect", filename:"Controller/Panel/Options/Panel_Options_BG"}
+ └ TabBarWidget "OptionsTabs" {tabCount:N, textStrings:[...], tabMessages:["SettingsPanelMessage:CheckChanges:<子面板名>"...], filename:"Controller/Panel/Stash/V2/StashTabs"}
+```
+- 子面板**靠文件名自动注册**（`su_xxxhd.json` → 面板名 `SU_Xxx`，无需登记，见 §2）；`tabMessages` 指向子面板名即可切换。`SettingsPanelMessage:CheckChanges` **能切到 `VideoOptionsPanel` 子面板**（实证）。
+- ⚠️ **别照抄原版主面板的 `CenterSection`**——它带 `$DictionaryModCreditText`（"Created by..."版权字，显示在屏幕左侧），抄进来就会一直显示。自建主面板不要这个节点。
+
+### 14.6 排查"面板能开但内容空白"
+1. 内容行 `name` 是不是 `"Row ItemNameDisplayMode"`（**最常见**，见 14.1）。
+2. 行高是否有效（`$OptionsTableRowHeight`），内容 y 是否 ≤ 行高。
+3. 图标 `filename` 路径是否存在（普通宝石裸名、`saphire` 拼写）。
+4. 子面板是否被 `tabMessages` 正确指向、文件名→面板名是否对。
