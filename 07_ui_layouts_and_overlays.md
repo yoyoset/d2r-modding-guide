@@ -230,3 +230,13 @@ SettingsPanel {priority:9002, fitToParent:true}
 2. 行高是否有效（`$OptionsTableRowHeight`），内容 y 是否 ≤ 行高。
 3. 图标 `filename` 路径是否存在（普通宝石裸名、`saphire` 拼写）。
 4. 子面板是否被 `tabMessages` 正确指向、文件名→面板名是否对。
+
+### 14.7 词典面板"重建/翻译"实战要点（脚本化改造词典时）
+
+改造现成词典面板（如把符文之语的符文构成从文字换成图标、把英文属性翻成中文）时踩过的坑：
+
+- **构成用图标**：面板里常把"由哪些符文/宝石构成"写成 `@rNNL + @rNNL` 文字（`@rNN`=符文序号 1-33，El=1…Zod=33）。换成图标：解析出序号 → `ButtonWidget{filename:"items/misc/rune/<code>_rune", rect:{x,y,scale}}`，比文字清晰得多。`scale` 别太小（0.6 几乎看不清，**0.9~1.0** 才够大）。
+- 🔴 **tooltip 换行是真换行符**：`tooltipString` 里的换行在 JSON 文件中写作 `\n`（**JSON 转义的换行符**，解析后是 0x0A）。脚本处理时若把它 `join` 成字面两字符 `\n`（如 Python 的 `'\\n'.join(...)`），游戏里会**原样显示 "\n" 文字、完全不换行**。务必用真换行符 `'\n'.join(...)`，`json.dump` 会自动转义回去。
+- 🔴 **生成器要幂等：从不可变备份读，别从自己的输出读**。"读原面板→抽数据→重建→写回原文件"的脚本，第二次跑会读到**已重建**的文件（@rNN 文字已变成图标、数据丢失）→产出残缺。**先把原始文件备份到独立目录，脚本永远从备份抽数据**，写回工作目录。
+- **`@token` 前缀别拼字符串**：要在引擎本地化名（`@RunewordNN`/`@gpb` 等）前加标记（如 ★），**别拼成 `"★@RunewordNN"`**（有破坏 token 解析的风险）。用**独立的 TextBox** 放 ★，名字 TextBox 仍是干净的 `"@RunewordNN"`。
+- **英文属性→中文：短语映射 + 长度降序匹配**。D2 属性高度公式化，用"英文短语→中文"替换表即可覆盖绝大多数（数值/范围原样保留）。**关键：按短语长度降序匹配**，否则短词抢匹配（`Defense` 会先吃掉 `Defense vs. Missile`、`Resist` 吃掉 `Resist Fire`）。技能名需单独维护一张表（D2 技能多，约 80+）。先翻结构短语（`Aura When Equipped`/`when you Kill an Enemy`/`(Necromancer Only)`），再翻技能名，迭代看残留逐步补表。
