@@ -34,7 +34,8 @@ obj["sgTW"] = obj["zhTW"]   # 若有 zhTW
 1. **字符串 JSON 缺 `sgCN`/`bnCN`**（最常见，~99%）。注意要扫 `strings/` **和** `strings-legacy/` 两个目录。
 2. `dataversionbuild.txt` 版本号与当前游戏不一致。
 3. 存在 `data/hd/texture_desc_cache.json`（不应在 mod 内 → 重验所有贴图，加载 4+ 分钟）。
-4. 存在 `data/hd/character/**/*.model` 或 `data/hd/character/enemy/*hire.json`（结构性禁止）。
+4. 存在 `data/hd/character/**/*.model`（**真正的硬禁 = `.model` 二进制网格**，顶点格式/和谐冲突）。
+   - ⚠️ **纠错**：`data/hd/character/enemy/*hire.json` **实体 json（不含 .model）并未证实禁止**——JCY 国服在线版 ship 了 **131 个 enemy + 6 个 npc 实体 json、0 个 .model**，照常在线运行。会崩的是 **`.model` 文件** 和 **`data/global/excel/act*hire.json`（佣兵*数值/excel*）**。**别把"佣兵实体 json"与"佣兵 excel"混为一谈**（旧文档曾混淆并误标 hd 实体 json 为禁）。
 
 ### 模式 B：启动 ~20 秒无日志崩溃
 - **根因：字符串条目缺 `id` 字段。** 引擎建字符串索引表时每条必须有数字 id，缺失直接崩、无日志。
@@ -64,8 +65,9 @@ obj["sgTW"] = obj["zhTW"]   # 若有 zhTW
 | Excel TXT（视觉类 states/overlay/sounds） | `data/global/excel/*.txt` | ✅ **在线可用** |
 | Excel TXT（数值类 伤害/掉率/属性） | 同上 | ⚠️ 技术可用，但**改公平性=TOS 封号风险** |
 | 环境模型 | `data/hd/env/model/**/*.model` | ✅ 安全 |
-| **角色模型** | `data/hd/character/**/*.model` | ❌ 结构性禁止 |
-| 雇佣兵定义 | `data/hd/character/enemy/*hire.json` | ❌ 结构性禁止 |
+| **角色模型(二进制网格)** | `data/hd/character/**/*.model` | ❌ 结构性禁止（真正硬禁） |
+| 角色/敌人/佣兵**实体 json**（不含 .model） | `data/hd/character/{enemy,npc}/*.json` | ✅ 安全（JCY ship 131+6 个，0 .model） |
+| 佣兵**数值 excel** | `data/global/excel/act*hire.json` | ❌ 国服禁（启动~20s崩，同 .model 类） |
 | 雇佣兵 UI 图标 | `data/hd/global/ui/hireables/` | ✅ 安全 |
 | 和谐冲突资产 | `lit_mesh/bonearmor/`、`objects/shrines_other/` | ❌ DeviceLost |
 | 贴图缓存 | `data/hd/texture_desc_cache.json` | ❌ 加载 4+ 分钟 |
@@ -76,6 +78,7 @@ obj["sgTW"] = obj["zhTW"]   # 若有 zhTW
 > - ❌"excel = 国服在线禁区" → ✅ `-mod` 模式 excel 在线可用，服务器不校验 mod 内 excel。
 > - ❌"所有 .model 都要删" → ✅ 只有 `character/` 下的禁，`env/model/` 安全。
 > - ❌"卡读取因为 excel" → ✅ 真因几乎都是缺 sgCN/bnCN。
+> - ❌"`character/enemy/*hire.json` 实体结构性禁止" → ⚠️ **真正硬禁是 `.model` 与 `excel/act*hire.json`**；佣兵/角色**实体 json 不含 .model 即无已知崩溃机制**（JCY 实证 ship 131 enemy+6 npc 实体 json）。旧文档把"佣兵 excel"与"佣兵实体 json"混淆而误标，已纠正。社区确有改佣兵外观的国服 mod。
 
 ---
 
@@ -142,7 +145,7 @@ obj["sgTW"] = obj["zhTW"]   # 若有 zhTW
 ## 6. 国际服 → 国服 转换 SOP（可复用清单）
 
 1. **版本号**：`dataversionbuild.txt` 改成当前游戏版本。
-2. **删结构性禁止文件**：`character/enemy/*hire.json`、`character/**/*.model`（保留 `env/model/`）。
+2. **删结构性禁止文件**：`character/**/*.model`（二进制网格，保留 `env/model/`）+ `data/global/excel/act*hire.json`（佣兵数值 excel）。**注意**：`character/{enemy,npc}/*.json` 实体 json（不含 .model）**不必删**，JCY 保留并在线运行。
 3. **删和谐冲突资产引用**：`vfx/meshes/lit_mesh/bonearmor/`、`objects/shrines_other/`，以及 blz-log 报 `Mesh vertex format invalid` 的其他路径对应 JSON。
 4. **删贴图缓存**：`texture_desc_cache.json`。
 5. **删外语 mod 专属内容**：`Mod*.json` 自定义面板、外语 baked 面板（如 `Skillguide*Panelhd.json`）、超大外语 sprite（helpMaster 等）、非 D2R 职业图标。
@@ -154,6 +157,6 @@ obj["sgTW"] = obj["zhTW"]   # 若有 zhTW
 ---
 
 ## 7. 排查顺序速记
-- 卡读取 → 查 sgCN/bnCN → 版本号 → texture_desc_cache → hire/model
+- 卡读取 → 查 sgCN/bnCN → 版本号 → texture_desc_cache → `.model` 文件 / `excel/act*hire.json`（**非** character 实体 json）
 - 20s 无日志崩 → 查字符串缺 id
 - 进游戏 DeviceLost → blz-log 找 `Mesh vertex format invalid` → 删引用和谐资产的 JSON
