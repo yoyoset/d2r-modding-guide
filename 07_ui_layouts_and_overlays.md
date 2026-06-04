@@ -111,6 +111,8 @@ priority：HUD 按钮 99；侧边面板 5-10；全屏主体 9002；Tab 内容 90
 - **`ÿc9`/`@cyc9` 颜色码只在"物品/NPC 字符串值"处解析；在 layout JSON 的 TextBox `text` 里不解析**，会原样显示字面 "ÿc9"。
 - layout 里要上色必须用 style 的 `fontColor`（如 `"fontColor": "$FontColorGoldYellow"`）。
 - 在字符串文件(item-names 等)里用 `ÿc`（`chr(0xFF)+'c9'`）；在 layout/profile 变量里用 `@cyc`。
+- **可上色的字符串值范围广**：除物品名外，**怪物暗金词缀名也能上色**——它们在 `bnet.json`（如 `uniquecursed`=诅咒、`monsteruniqueprop6`=石肤术、各 `monsteruniqueprop*`），改 `zhCN/sgCN/bnCN` 加 `ÿc` 前缀即变色强调危险词缀。`bnet.json` 含裸控制字符 → **只文本替换、禁 json 解析**；三字段同步。
+- 🔴 **字号无法用字符串改**：`ÿc` 只能控制**文字内容 + 颜色**，**没有"字号/放大"码**。要更大的字只能在渲染它的 UI layout 里调（怪物悬浮名由引擎渲染，改不了）。想强调又放不大 → 用**颜色 + 醒目符号**（`◆`/`★` 等字体安全符号，前后包夹）替代。
 
 ---
 
@@ -144,6 +146,14 @@ JSON 引用: "filename": "PANEL/BTN/btn_j_0"   （无扩展名，大小写不敏
 通过向实体 JSON 的 `entities`/`components` 注入组件实现，**不替换整文件**：
 - **掉落光柱**（高价值物品地面光束）：改 `data/hd/objects/items/runes/*.json` 等，注入 `VfxDefinitionComponent`（指向光柱 .particles）+ `TransformDefinitionComponent`（y 偏移浮于物品上方）。
 - **Boss 发光/头顶符文**：改 `data/hd/character/enemy/<boss>.json`，注入 VfxDefinition + Transform（如 `position.y:7.0`）。
+- **头顶名字/昵称**（NPC/敌人/佣兵悬浮名）：往角色实体 json（`character/{npc,enemy}/<name>.json`）的 `entities[]` **追加一个实体**：
+  ```json
+  { "type":"Entity","name":"entity_root","id":<唯一>,"components":[
+    {"type":"VfxDefinitionComponent","filename":"data/hd/nickname/particles/<name>.particles","hardKillOnDestroy":false},
+    {"type":"TransformDefinitionComponent","position":{"x":0,"y":9.0,"z":0}} ]}   // y=头顶高度，boss 用 13
+  ```
+  - **名字是预渲染贴图**：`.particles` 引用 `nickname/textures/graphic/npcname_<x>.texture`（+`..glow`）。所以名字是**图片**——换文字/中文化要重做贴图，改不了字符串。
+  - **国服安全**：这类只 ship `.json`+`.particles`+`.texture`、**无 `.model`** → 无崩溃机制（见 `06` 已纠正的佣兵/角色实体误判）。佣兵 `*hire.json` 实体同理可加（真正禁的是 `.model` 与 `excel/act*hire.json`）。
 - **地面信标/传送标记**：`data/hd/env/porory/beacon/` Prefab + 注入到 `env/preset/`、`roomtiles/`。
 - **路径箭头**：方向箭头 .particles 注入场景 preset tile。
 > ⚠️ 引用被国服和谐的资产路径（骨甲/骷髅祭坛）会 DeviceLost 崩溃，见 `06`。
