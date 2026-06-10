@@ -19,6 +19,7 @@
 | ---: | --- | --- |
 | 1 | 官方 CASC 解包数据（对应目标 patch 版本） | 最权威的 代码/id/原文 |
 | 1 | 社区维护的"未和谐"基准字符串库（如 yup 系列） | 去和谐 zhTW + 英文 + id 的便捷来源 |
+| 1 | 社区维护的完整 excel 镜像（如 [pinkufairy/D2R-Excel](https://github.com/pinkufairy/D2R-Excel)，按 patch 更新） | skills.txt / itemtypes.txt 等全量表，先 `git pull` 再用 |
 | 2 | 目标客户端 CASC（如国服 bnCN） | 核对和谐名现状 |
 | 3 | 成品 mod（参照做法） | **不作为译名/数据权威** |
 | ✗ | AI 记忆 / 经验 / 训练数据 | **禁止作为代码或 id 来源** |
@@ -76,5 +77,7 @@
 | 符文 key 格式 | 是 `r16`/`r16L`，不是 `Rune16` | 写错 key 改不到 |
 | 部分宝石名只在 bnet | 标准蓝/绿/红/钻可能不在 item-names | 以为有，实际没有 |
 | 品质标签 bnet 抢显示 | bnet 同名 key 覆盖 item-nameaffixes | 改 nameaffixes 无效 |
+| 技能 ID 凭记忆必错 | `skill(NN)` 必查 skills.txt 的 `*Id` 列。实测记忆陷阱：圣骑区段有偏移（110=电抗光环/111=复仇/115=活力/118=圣电震击/121=天堂之拳）、26=扫射(非诱饵)、92=毒新星(93 才是骨魂) | 物品注解/wiki 张冠李戴 |
+| 最大孔数不是 gemsockets 原值 | 实际上限 = min(weapons/armor.txt 的 `gemsockets`, itemtypes.txt 该 type 的 `MaxSockets3`) | 直接读 gemsockets 会标错上限 |
 
 > 每发现一个新怪癖 → 回填本表。**任何代码都必须 grep 源文件确认，不可凭记忆。**
