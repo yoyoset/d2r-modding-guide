@@ -101,3 +101,62 @@
 - [ ] 看 `hd/ui/fonts` 是否定制字体（决定能用哪些符号）
 - [ ] 对照原版基准 diff，列出真实改动清单
 - [ ] 把客户需求映射到层（见 §3），再按 `02`/`03`/`04` 动手
+
+---
+
+## 5. 资产依赖扫描与分体贴图（漏拷 = 贴图错误/粉块）
+
+预设/粒子/roomtiles 之间靠**文本内嵌路径**互相引用。给 mod 补资产时用 BFS 递归扫描：
+
+```
+种子文件 → 正则抓 data/(hd|global)/.../*.(texture|particles|model|json|physics) →
+  目标 mod 已有 → 只扫它的依赖
+  来源 mod 有   → 拷贝 + 继续扫描
+  都没有       → 原版 CASC 资产，跳过
+```
+
+两个实测踩过的坑（症状都是"看起来导入成功了，游戏里贴图错误"）：
+
+1. **分体贴图约定**：json/particles 里引用 `xxx.texture`，散装磁盘上实际是
+   `xxx$a.texture`（alpha）+ `xxx$rgb.texture` 两个文件（部分只有 `$a`），运行时自动配对。
+   依赖扫描按引用名直查 `exists(xxx.texture)` 会**全部误判为"原版资产"跳过**——
+   如果那批恰好是被和谐删除的资产（血迹 decal 等），就漏拷了。
+   判存在性必须同时尝试 `$a`/`$rgb` 后缀。
+2. **种子文件"已有即跳过"陷阱**：目标 mod 里已存在同名文件 ≠ 内容相同。
+   如果目标里是别的 mod 的简化版（或原版），来源 mod 的加强版永远进不来。
+   对明确要"以来源为准"的文件维护一个 FORCE 覆盖清单（覆盖前备份）。
+
+安全守卫照旧：`hd/character/**/*.model|.skeleton` 永不拷（CN 闪退，见 06）。
+
+---
+
+## 6. 移植 D2RMM 脚本 mod（mod.js 内嵌内容）到散装 mod
+
+D2RMM mod = `mod.json`（元数据/配置）+ `mod.js`（用 `D2RMM.readJson/writeJson/copyFile`
+API 把内容写进游戏目录）。大型 mod 会把全部 JSON 载荷内嵌在 mod.js 里（几百 KB 很常见）。
+不装 D2RMM 也能移植——**写个 Node 垫片仿真 API 跑一遍**：
+
+```js
+const D2RMM = {
+  readJson(rel)        { /* 从目标 mod 的 data/ 读(容忍注释/尾逗号) */ },
+  writeJson(rel, data) { /* 落到暂存目录，别直接进 mod */ },
+  copyFile(s, d, r)    { /* 记录日志即可 */ },
+};
+new Function('D2RMM', 'config', 'console', fs.readFileSync('mod.js','utf8'))(D2RMM, config, console);
+```
+
+`readJson` 指向**目标 mod 现状**，merge 逻辑就会基于你的文件真实执行。产物落暂存目录后逐文件审查再装。
+
+移植审查清单（每条都是实测踩过的）：
+
+- **writeJson = 整文件写**。mod 自带的 `hudpanelhd.json` 等核心 layout 多半是"原版+它的按钮"
+  整体替换——直接采用会冲掉目标 mod 的全部自定义 widget。**只摘它新增的 widget 注入现有文件**
+  （diff 新旧 widget 树的 name 集合即可定位）。
+- **字符串 json 同样是整文件覆盖**。如果 mod 写一个目标 mod 没有的字符串文件（如 `npcs.json`），
+  产物只含它的新条目 → 装进去就把**原版该文件的全部字符串顶没了**（NPC 名字消失）。
+  必须先从 CASC 提原版垫底再合并。CN 端记得全量三字段同步（见 02）。
+- **新 id 段全局碰撞检查**：扫目标 mod 全部 strings/*.json + 原版同名文件。
+- **`copyFile('hd','hd',true)` 类整目录拷贝**：先看 mod 包里这个目录到底有什么、
+  和目标 mod 已有资产是否冲突，别无脑整拷。
+- **`@key` 引用审计**：面板里 `text`（固定行高表格）引用多行字符串会叠行；
+  `tooltipString`（自动撑高）则无碍。移植前按字段统计一遍引用。
