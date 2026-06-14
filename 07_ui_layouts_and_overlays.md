@@ -53,6 +53,10 @@ rect.x/y = 相对锚点偏移（正=右/下）
 
 **yupgoolg 式高级属性嵌入**：不要把高级属性列表硬塞进 `CharacterStatsPanel`。FCR/FHR/IAS/MF 等滚动列表由原生 `AdvancedStatsPanel` 自动填充。可靠做法是保留两个 root：`CharacterStatsPanel` 负责普通属性和加点，在下半区放一个大按钮/框体调用 `CharacterStatsPanelMessage:ToggleAdvancedStats`；`AdvancedStatsPanel` 仍保持原生类型，但把 `rect`、背景、`ListContainer`、滚动条重排到人物面板下半区。视觉上像同一张人物属性面板，底层仍是两个原生绑定面板。
 
+**MDK 式临时只读属性小窗**：MDK 另建了 `MDKCharacterStatsPanelhd.json` / `MDKCharacterStatsResPanelhd.json` / `MDKCharacterStatsResForMiniPanelhd.json`，root 仍是 `type:"CharacterStatsPanel"`，但改成自定义 `name`（如 `MDKCharacterStatsPanel`），把人物名、基础属性、抗性、伤害等固定 widget 重新排到屏幕/HUD 区域。入口曾在 `characterstatspanelhd.json` 中用按钮 `PanelManager:TogglePanel:MDKCharacterStatsPanel` / `PanelManager:TogglePanel:MDKCharacterStatsResPanel`，同时原人物面板底部有 `TimerWidget` 自动 `ClosePanel:MDKCharacterStatsPanel` / `ClosePanel:MDKCharacterStatsResPanel`，避免这些分身面板长期挂着干扰原面板。MDK 还保留 `mdkadvancedstatspanelhd.json`（`type:"AdvancedStatsPanel", name:"MDKAdvancedStatsPanel"`）作为自定义高级属性皮肤/位置参考。
+
+⚠️ MDK 方案的本质仍是“复制强绑定原生面板类型”。它能作为反向工程样本，但不建议无脑复刻：SUMOD 实测第二个 `CharacterStatsPanel` 做 MiniStats 时，点击开关会触发 D2R 运行时崩溃；把 `AdvancedStats` 藏屏外也会破坏原人物面板高级属性按钮。若要借鉴 MDK，只适合做短生命周期、只读、自动关闭的实验面板；生产优先用 yupgoolg 方案或直接改造唯一原生人物面板。
+
 ---
 
 ## 4. 消息路由（已验证）
