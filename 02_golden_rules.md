@@ -25,17 +25,14 @@ D2R **国服(bnCN)客户端**对同一物品的不同部分，读取来源文件
 
 ---
 
-## 2. 三字段同步（CN 必须）
+## 2. 简中字段：国服读 `zhCN`（sgCN/bnCN 翻案，2026-06-13）
 
-CN 客户端读 `sgCN`/`bnCN`，**不读** `zhCN`。每条改动必须三字段一致：
+**国服客户端显示简中读的就是 `zhCN`。** 旧规则"CN 读 sgCN/bnCN、不读 zhCN、漏填卡读取"**已被实证推翻**：国服原版数据（CASC 提取）根本没有这两个字段；JCY/MDK/ComG 三个在国服正常运行的 mod 全库 0 条 sgCN/bnCN；新建条目仅 `enUS`+`zhCN` 游戏内实测生效。详见 `06` §1。
 
-```python
-entry["zhCN"] = "文本"
-entry["sgCN"] = entry["zhCN"]   # CN 客户端读这个
-entry["bnCN"] = entry["zhCN"]   # CN 客户端读这个（极重要）
-```
+- **新写条目**：`zhCN`（+`enUS` 兜底）即可，不需要 sgCN/bnCN。
+- **继承 SU 系文件**（条目已带 sgCN/bnCN 防御性字段）：改 `zhCN` 时把它们一起改掉，防陈旧值风险（字段存在时是否被优先读取未实测）。
 
-> 名字类如需兼顾国际/繁中端，再同步 `zhTW`（按各文件既有约定：有的文件 zhTW 存全名、CN 三字段存简称）。
+> 名字类如需兼顾国际/繁中端，再同步 `zhTW`（按各文件既有约定：有的文件 zhTW 存全名、简中存简称）。
 
 **字符串 json 是整文件覆盖，不是合并**：mod 里出现 `strings/xxx.json`，原版同名文件的
 全部条目就被顶掉。新建一个原版已有的字符串文件（如 `npcs.json`）时，必须先从 CASC
@@ -49,7 +46,7 @@ entry["bnCN"] = entry["zhCN"]   # CN 客户端读这个（极重要）
 
 | 故障 | 触发 | 正确做法 |
 | --- | --- | --- |
-| **卡"正在读取"** | 字符串缺 `sgCN`/`bnCN`（最常见）；`texture_desc_cache.json`（加载4+分钟）；`character/**/*.model`、`character/enemy/*hire.json`（结构禁止）；版本号不符 | 补三字段；删这些文件；对齐版本号 |
+| **卡"正在读取"** | `texture_desc_cache.json`（加载4+分钟）；`character/**/*.model`（结构禁止）；版本号不符。（旧说"缺 sgCN/bnCN"已翻案，见 §2） | 删这些文件；对齐版本号 |
 | **启动~20s 无日志崩溃** | 字符串条目**缺 `id` 字段** | 每条必须有 id，自定义用 vanilla 最大值之上的高位段 |
 | **进游戏 DX12 DeviceLost** | mod 引用了**被国服和谐替换的美术资产**（`lit_mesh/bonearmor/`、`objects/shrines_other/` 等），顶点格式不兼容 | 删 mod 内引用这些路径的 JSON（blz-log 搜 `Mesh vertex format invalid`） |
 
@@ -71,6 +68,6 @@ D2R 中文字体 Unicode 覆盖有限。loot 简称里用了字体**没有的符
 
 ## 5. 双端一致性
 
-- 改动同时影响国服(bnCN/sgCN)与国际版(zhCN/zhTW)。优先按**国际版 zhTW 去和谐**译名，再简体化。
+- 改动同时影响国服与国际版（简中 zhCN，繁中 zhTW）。优先按**国际版 zhTW 去和谐**译名，再简体化。
 - UI 坐标改动**勿推出屏幕外**（如 `rect.x: -1394`）来"隐藏"面板——会导致功能锁死。用 `TogglePanel` 开关或还原坐标。
 - 键鼠 HUD 的改动在**手柄模式不生效**（手柄读 `layouts/controller/`），需单独注入。

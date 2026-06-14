@@ -49,6 +49,10 @@ rect.x/y = 相对锚点偏移（正=右/下）
 
 > ⚠️ **勿用负坐标把面板推出屏外来"隐藏"**（如 `rect.x:-1394`）——会导致引擎仍拉起但不可见、功能锁死。用 `TogglePanel` 开关。
 
+> ⚠️ **不要复制原生强绑定面板类型来做自定义小窗**。例如 `CharacterStatsPanel` 会和人物属性面板的固定 widget 名（`AdvancedStats`、属性点按钮等）绑定；如果另建一个 `CharacterStatsPanel` 并把 `AdvancedStats` 藏到屏外，可能导致原版人物面板高级属性无法点击。精简成只读 MiniStats 也不可靠：D2R 可能在打开第二个 `CharacterStatsPanel` 时初始化缺失的固定控件并直接崩溃。实时人物属性优先改造唯一原生人物面板，不建议再建分身。
+
+**yupgoolg 式高级属性嵌入**：不要把高级属性列表硬塞进 `CharacterStatsPanel`。FCR/FHR/IAS/MF 等滚动列表由原生 `AdvancedStatsPanel` 自动填充。可靠做法是保留两个 root：`CharacterStatsPanel` 负责普通属性和加点，在下半区放一个大按钮/框体调用 `CharacterStatsPanelMessage:ToggleAdvancedStats`；`AdvancedStatsPanel` 仍保持原生类型，但把 `rect`、背景、`ListContainer`、滚动条重排到人物面板下半区。视觉上像同一张人物属性面板，底层仍是两个原生绑定面板。
+
 ---
 
 ## 4. 消息路由（已验证）
@@ -111,7 +115,7 @@ priority：HUD 按钮 99；侧边面板 5-10；全屏主体 9002；Tab 内容 90
 - **`ÿc9`/`@cyc9` 颜色码只在"物品/NPC 字符串值"处解析；在 layout JSON 的 TextBox `text` 里不解析**，会原样显示字面 "ÿc9"。
 - layout 里要上色必须用 style 的 `fontColor`（如 `"fontColor": "$FontColorGoldYellow"`）。
 - 在字符串文件(item-names 等)里用 `ÿc`（`chr(0xFF)+'c9'`）；在 layout/profile 变量里用 `@cyc`。
-- **可上色的字符串值范围广**：除物品名外，**怪物暗金词缀名也能上色**——它们在 `bnet.json`（如 `uniquecursed`=诅咒、`monsteruniqueprop6`=石肤术、各 `monsteruniqueprop*`），改 `zhCN/sgCN/bnCN` 加 `ÿc` 前缀即变色强调危险词缀。`bnet.json` 含裸控制字符 → **只文本替换、禁 json 解析**；三字段同步。
+- **可上色的字符串值范围广**：除物品名外，**怪物暗金词缀名也能上色**——它们在 `bnet.json`（如 `uniquecursed`=诅咒、`monsteruniqueprop6`=石肤术、各 `monsteruniqueprop*`），改 `zhCN` 加 `ÿc` 前缀即变色强调危险词缀（条目若带 sgCN/bnCN 旧字段则一并改，见 `06` §1 翻案）。`bnet.json` 含裸控制字符 → **只文本替换、禁 json 解析**。
 - 🔴 **字号无法用字符串改**：`ÿc` 只能控制**文字内容 + 颜色**，**没有"字号/放大"码**。要更大的字只能在渲染它的 UI layout 里调（怪物悬浮名由引擎渲染，改不了）。想强调又放不大 → 用**颜色 + 醒目符号**（`◆`/`★` 等字体安全符号，前后包夹）替代。
 
 ---
@@ -132,13 +136,76 @@ JSON 引用: "filename": "PANEL/BTN/btn_j_0"   （无扩展名，大小写不敏
 ```
 帧控制：`hoveredFrame`/`pressedFrame`/`disabledFrame`。Mini 按钮贴图通常 4 帧。`blank` = 全透明（HelpPanel 热区用）。
 
+### 10.1 PNG → `.sprite` 制作法（SPa1，已用于 effecticon/仓库配方图）
+
+对已验证的 UI `.sprite`（effecticon、按钮、面板小贴图、物品 UI 图标）可按 **SPa1 + 未压缩 RGBA** 处理：
+
+| 字段 | 位置 | 说明 |
+| --- | --- | --- |
+| magic | 0x00 | ASCII `SPa1` |
+| width | 0x08 | u32 little-endian |
+| height | 0x0C | u32 little-endian |
+| header | 0x00-0x27 | 40 字节；保留同槽位原文件头最安全 |
+| pixels | 0x28 起 | `width * height * 4` 字节，RGBA 顺序 |
+
+可靠流程：
+
+1. 先从同槽位或同类资源取一对模板：`xxx.sprite` + `xxx.lowend.sprite`。
+2. 读模板宽高和 40 字节头。不要凭肉眼猜尺寸；同名 lowend 通常是半分辨率或低画质专用尺寸。
+3. 准备透明 PNG，转 RGBA，等比缩放并居中贴到模板画布。需要“发光边缘”的 UI 图标，可以直接把光晕画进 PNG 的透明像素里。
+4. 写出 `模板头 + RGBA像素` 为 `xxx.sprite`；再按 lowend 模板尺寸生成 `xxx.lowend.sprite`。
+5. 同名 lowend 必须随包携带；只替换标准版会在低画质/特定 UI 路径下缺图。
+
+Python 伪代码：
+
+```python
+from pathlib import Path
+from PIL import Image
+import struct
+
+template = Path("source_slot.sprite").read_bytes()
+w, h = struct.unpack_from("<II", template, 8)
+header = template[:40]
+
+img = Image.open("icon.png").convert("RGBA")
+canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+img.thumbnail((w, h), Image.LANCZOS)
+canvas.alpha_composite(img, ((w - img.width) // 2, (h - img.height) // 2))
+
+Path("target.sprite").write_bytes(header + canvas.tobytes())
+```
+
+> ⚠️ 这是 UI/icon 类 `.sprite` 的实战格式，不等于 D2R 所有二进制资产都能这样硬写。遇到不符合 `SPa1`、头部长度不同、或文件大小不等于 `40 + width*height*4` 的资源，先当新格式单独解析。
+
+### 10.2 “发光素材”不是一条管线
+
+要分两类：
+
+- **UI 图标的发光**：可以按 10.1 做。把外发光、描边、阴影直接画进 PNG，封进 `.sprite` 后就是一个静态全彩图标；`E031`–`E036` effecticon 徽章就是这类。
+- **场景/地面/头顶的真实发光**：通常不是 `.sprite`，而是 `.particles` + `.texture` + JSON 组件注入。光柱、boss 头顶标记、地面信标、昵称 glow 走 `VfxDefinitionComponent`，粒子文件再引用贴图。
+
+真实 VFX 的最小链路：
+
+```text
+实体/roomtile/object JSON
+  → VfxDefinitionComponent.filename = data/hd/.../*.particles
+  → .particles 引用 data/hd/.../*.texture
+  → 散装磁盘通常落成 xxx$rgb.texture + xxx$a.texture
+```
+
+所以“爱心徽章/品质徽章”这类小图标可以 PNG→`.sprite`；“掉落光柱/地面环/头顶发光字/动态粒子”要按 VFX 资源链做，不能只封一个 sprite。
+
 ---
 
 ## 11. 字体与图标内嵌
-- D2R 多字体 fallback 链：中文主字体 → 图标字体(kodia 等) → 西文字体。找到字符即停。
+
+**四个图形来源先分清**（最易混，详见 `04` §2.2-pre）：①**替换字体文件**（你的容器）②**往字体里 cmap 合成单色图标**（吃 ÿc 色码）③**原版 `\ue0XX` 图片替换层**（手柄/系统提示，多数只引用）④**`E031`–`E036` controller HUD effecticon 槽位**（`data/hd/global/ui/controller/hud/effecticons/immune_*.sprite`，可由 mod 替换，不吃 ÿc）。
+
+- **字体替换 = 覆盖同名文件**：D2R 按**固定文件名**加载 `data/hd/ui/fonts/`，认名不认内容。换中文显示字体 = 用你的字体覆盖 `blizzardglobal-v5_81.ttf`（主字体：拉丁+CJK+符号+E0xx 单色兜底）。实证：某 mod 的该文件字节 MD5 = 它的自定义合并字体源——即"改名顶替"。其余：`kodia.ttf`(物品图标)、`blizzardglobaltcunicode.ttf`(繁中)、`exocetblizzardot-medium.otf`(标题)。
+- **fallback 链**：中文主字体 → 图标字体(kodia) → 西文字体，找到字符即停。
 - **字符串里内嵌图标**：直接插入对应 Unicode 码点字符，引擎从字体取图标字形。如 `"ÿcT<F05A>ÿc4..."`（F05A=任务物品图标）。
-- 图标常见区：Blizzard PUA（E001-F7EC，装备类型/手柄键图标）、kodia 物品图标（F020-F07D）、合并进中文字体的 loot-filter 图标（散布多个 Unicode 区，靠字形宽度=UPM 判别）。
-- ⚠️ 用任何特殊符号/图标前**必须查字体覆盖**，否则空白方块（见 `04`）。
+- 图标常见区：PUA（`\ue0XX` 多为引擎全彩 sprite / 单色兜底，见 `04`）、kodia 物品图标（F020-F07D）、合并进中文字体的 loot-filter 图标（散布多个 Unicode 区，靠字形宽度=UPM 判别）。
+- ⚠️ 用任何特殊符号/图标前**必须查字体覆盖**，且 cmap 有映射 ≠ 字形有内容（空字形=0 轮廓，过检查却不显示，见 `04` §2.1）。
 
 ---
 
@@ -269,3 +336,28 @@ SettingsPanel {priority:9002, fitToParent:true}
 **要在核心面板上加东西怎么办**：别改原文件，**新建独立面板文件**（自定义 `name`，靠文件名自动注册，见 §2），用 HUD 按钮 `TogglePanel:<你的面板>` 或定时器打开它。这样既不固化基础面板版本，又能加功能（mini 盒子/快捷面板就是这么做的）。
 
 > 同理适用于任何"当时照抄一份改"的基础 layout：能注入/另起就别整文件覆盖，否则就是给未来的版本更新埋雷。
+
+---
+
+## 16. 地图寻路信标系统（roomtiles + beacon prefab，三家 mod 同构）
+
+> 证据级：📐文件结构事实 + 🔬JCY/SUMOD系/MDK 生产性使用。色号↔实际颜色需游戏内截图定色。
+
+给楼梯/出入口加"地面光环+悬停光柱"引导，机制（porory 体系，JCY/SU 系/MDK 同构）：
+
+```
+data/hd/roomtiles/<tile名>.json        ← 按"楼梯所在房间块"名字逐个覆盖（如 act_1_cave_down）
+  ├─ VfxDefinitionComponent → data/hd/vfx/particles/env/UI/vfx_mouse_over_light_sml.particles
+  │   （鼠标悬停光柱高亮）
+  ├─ PrefabPlacementDefinitionComponent → 自定义 pf_beacon_*.json（地面信标环）
+  │   └─ prefab = 4 个象限 DecalDefinitionComponent（各150×150绕一圈、emissive、lightMask:16，
+  │        引用同一张色卡贴图）
+  └─ （可选）AudioEmitterComponent（洞口环境音）
+```
+
+- **贴图命名约定**：`beacon_c{色号}_s{样式}_o{不透明度}.texture`，**分体 `$a`+`$rgb` 两文件**（依赖扫描判存必须按此，按引用名直查必漏）。
+- **语义分色范式（JCY，53 tiles 四幕全覆盖）**：**上行/下行楼梯不同色**（upstairs=c05 / downstairs=c06），传送点 c07、下一区域 c11、任务 c03、先驱 c09、物品 c04，统一 o100。每个楼梯 `*_down`+`*_up` 成对建 tile，双向可辨。
+- **另一流派**：只标"前进方向"（SU 系：50+ tiles 几乎全下行/进副本，o25~o100 透明度分层）。
+- **色号→语义映射是 mod 专属设计**，不同包同一色号含义不同，移植时勿混搬。
+- 粒子光柱型信标（MDK lightguider）可与 decal 环并用。
+- ⚠️ 移植坑：①预设引用的原版资产可能已被国服和谐删除，必须随预设同梱；②种子文件"已存在→跳过"会挡掉加强版，需 FORCE 列表。

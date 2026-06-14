@@ -41,11 +41,10 @@
 `data/local/lng/strings/mymod.json`：
 ```json
 [
-  { "id": 30051, "Key": "mymod_title", "enUS": "My Dictionary",
-    "zhCN": "词典", "sgCN": "词典", "bnCN": "词典" }
+  { "id": 30051, "Key": "mymod_title", "enUS": "My Dictionary", "zhCN": "词典" }
 ]
 ```
-- **三字段同步** `zhCN=sgCN=bnCN`（国服读 bnCN，国际读 zhCN）。
+- 简中写 `zhCN` 即可，国服国际通用（"必须 sgCN/bnCN"已翻案，见 `06` §1；继承 SU 系文件时才需同步已存在的旧字段）。
 - 主索引表（item-names 等）`id` 必须**数字**且唯一；自定义条目用 vanilla 最大值之上的高位段（缺 id→启动~20s 崩溃，见 `06`）。
 - 文件名任意，引擎加载 `strings/` 下所有 `.json`，**后加载覆盖同名 key**。
 - 面板里引用：`"textString": "@mymod_title"`。
@@ -69,7 +68,7 @@
 - [ ] 正常启动、不卡读取条、无 DeviceLost
 - [ ] 自定义中文不乱码、图标不是方块
 - [ ] 面板能开/关
-- [ ] 国服(bnCN) 与国际(zhCN) 文字一致
+- [ ] 简中 zhCN 已填、与繁中 zhTW 译名一致（已去和谐）
 
 ---
 
