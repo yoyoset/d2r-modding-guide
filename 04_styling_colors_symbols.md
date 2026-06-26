@@ -331,3 +331,59 @@ D2R 中文字体码表狭隘。要用大量自定义图标，把图标字体的�
 - 过长说明用 `\n` 换行，续行可缩进对齐。
 - 高亮材料名末尾 `ÿc0` 闭合，防止污染后续行。
 - 百科里的材料名**必须与背包掉落简称一致**（避免"材料对不上"的困惑）。
+
+---
+
+## 6. 怪物精英高亮染色（HD palette）
+
+精英怪“皮肤染色”不是改每个 monster JSON，也不是 UI 名称颜色。HD 模式有两条 palette 路径会参与：
+
+| 文件 | 作用 | 覆盖边界 |
+| --- | --- | --- |
+| `data/hd/global/palette/randtransforms.json` | 精英随机颜色池，成熟散件常用入口 | Champion、Unique、Superunique 中走随机精英色的实例都会受影响 |
+| `data/hd/global/palette/transforms.json` | 全局具名/编号 transform 表，`monstats2.txt` / `SuperUniques.txt` 的 `Utrans` 会引用这里 | 固定 `Utrans`、Cold/Poison 等特殊 transform 可能绕开随机池 |
+
+社区成熟方案（例：凯恩之角 koukakou 的“精英怪高亮 MOD”）核心就是改 `randtransforms.json`：把 `VariantColorTransform` / `RandomColorTransform` 里的每个 `ColorTransform.colorTint` 改成高亮色。作者说明中也明确：该方案会让蓝色精英、金色精英、固定精英都变亮；只适用于 HD 模式。Classic 模式走 `data/global/monsters/randtransforms.dat`，不是 JSON。
+
+示例（亮金，高辨识；会影响走随机池的蓝精英和暗金精英）：
+
+```json
+{
+  "type": "ColorTransform",
+  "name": "ColorTransform_000",
+  "colorAdjustment": {"x": 0, "y": 0, "z": 0, "w": 0},
+  "hueAdjustment0": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+  "hueAdjustment1": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+  "satAdjustment0": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+  "satAdjustment1": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+  "colorTint": {"x": 2.4, "y": 1.85, "z": 0.12, "w": 1.0}
+}
+```
+
+### 6.1 `Utrans` 与漏染诊断
+
+`Utrans` 字段在 `monstats2.txt` 和 `SuperUniques.txt` 中控制怪物使用的 color transform。它引用 `EMTRANSFORM` 枚举：
+
+| 值 | 含义 |
+| --- | --- |
+| `0` | Cold |
+| `1` | Poison |
+| `2`-`6` | Level 0-4 |
+| `7` | Miscellaneous |
+| `9` | Random |
+| `255` | hostile 时走 Cold，非 hostile 时走 Poison |
+
+固定暗金怪可能使用显式 `Utrans`，例如 `2`、`3`、`4`，或 SuperUnique 表中的其他编号。只改 `randtransforms.json` 时，这些显式 transform 可能无效；只改 `transforms.json` 时，普通随机精英可能无效。实际项目中可采用“双层覆盖”：
+
+1. 改 `randtransforms.json` 全部随机项，用于大多数精英高亮。
+2. 改 `transforms.json` 的 `ColorTransform_002` 至常见 SuperUnique 编号，用作固定 `Utrans` 兜底。
+3. 如果冰霜强化精英漏染，额外检查 `ColorTransform_000`（`EMTRANSFORM 0 = Cold`）。冰霜强化 unique modifier 可能强制走 Cold transform，绕开随机池。
+
+### 6.2 风险边界
+
+- 这是“精英可见性”方案，不是暗金-only 方案。`randtransforms.json` 成熟、稳定、覆盖大，但会让蓝精英也吃同一高亮色。
+- 不要轻易改 `ColorTransform_ColdFrozen`：它可能影响普通冻结/冰冻状态视觉，不只是冰霜强化精英。
+- 不要把经典模式和 HD 模式混在一起；HD 是 JSON，Classic 是 `.dat`。
+- 修改 palette 后需要完整重启游戏客户端验证，热重载/重进房间未必刷新全局 palette。
+
+证据等级：文件结构事实 + 生产散件实证。社区出处：`https://bbs.d.163.com/forum.php?mod=viewthread&tid=174990604`。
