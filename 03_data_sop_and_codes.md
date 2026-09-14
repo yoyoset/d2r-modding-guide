@@ -39,6 +39,38 @@
 提取注意：
 - D2R json 带 BOM → `open(path, encoding='utf-8-sig')`。
 - 文本含色码字符 `\xff`('ÿ') → Windows 控制台输出前 `sys.stdout.reconfigure(encoding='utf-8')`，否则 GBK 报错。
+  - ⚠️ 被别的脚本 `import` 的模块里**不要**写 `sys.stdout = io.TextIOWrapper(sys.stdout.buffer, ...)`：旧 wrapper 被回收时会关掉底层 buffer，主脚本随后 `ValueError: I/O operation on closed file`。统一用 `reconfigure`。
+
+### 3.1 直接从本机 CASC 提取 / 枚举（CascLib）
+
+社区镜像拿不到的文件（roomtiles、preset、overlay json、模型清单），或者要核对本机客户端版本时，用 CascLib（D2RMM 自带 `CascLib.dll`）直接读：
+
+```python
+import ctypes
+lib = ctypes.CDLL(r"<D2RMM>\tools\CascLib.dll")
+# 声明 argtypes/restype 后：
+lib.CascOpenStorage(rb"<游戏目录>\Data:osi", 0, ctypes.byref(storage))   # 国服要带 :osi
+lib.CascOpenFile(storage, rb"data:data\global\excel\states.txt", 0, 0, ctypes.byref(h))
+# CascReadFile 循环读完；枚举用 CascFindFirstFile(storage, b"*act4_lava_river_flow*", ...)
+```
+
+- 路径格式：`data:data\` 前缀 + 反斜杠。在 bash heredoc 里写 Python 时反斜杠容易被吃掉，路径分隔符可以用 `chr(92)` 拼。
+- `CascFindFirstFile` 用于"这个目录下到底有哪些文件"——例如用本机清单生成替换文件，而不是信任几年前的旧包。
+
+### 3.2 镜像版本 ≠ 客户端版本，要核对
+
+- 社区 excel 镜像通常跟国际服大版本，国服可能多一个热修号（例：镜像 3.3.93847、国服客户端 3.3.93854）。**用 CASC 提取本机 `global/excel/*.txt` 与镜像逐字节比对**，一致才可放心当权威（该例 91 个 txt 全一致）。
+- 数据版本号两服可能不同：`dataversionbuild.txt` 国服 93854、国际服 93847（同一时期）。做双端 mod 要分开写。
+
+### 3.3 第三方 mod 自带的 excel 可能是旧版本底
+
+- 例：某 buff 图标 mod 的 `states.txt`/`overlay.txt` 基于 3.2 做——缺 3.3 新增的 `missilelimit`/`primeevil_threat` 两行，`bind_demon`/`chronicle*`/`apocalypse` 等是旧值。直接整文件覆盖会把游戏数据倒退。
+- 做法：**以当前版本 excel 为底，只按列/按行合入 mod 真正改的部分**（该例 states 只取 `overlay1`/`removerlay` 两列，overlay 只追加新行并检查 id 不冲突）。先比对 mod 文件和它自带的 `base/` 原版，找出它到底改了什么列。
+
+### 3.4 社区附件获取
+
+- Inven（韩服）帖子附件是 `upload3.inven.co.kr/upload/<日期>/bbs/<文件>` 直链，带 `Referer` 可直接下载，无人机验证；部分大包放 Google Drive，需要手动下。
+- 整合包作者停止分享时，整合包帖通常仍列出每个模块的**原作者和原帖**，按原帖逐个下载散件即可。
 
 ---
 

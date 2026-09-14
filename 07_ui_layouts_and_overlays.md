@@ -199,6 +199,21 @@ Path("target.sprite").write_bytes(header + canvas.tobytes())
 
 所以“爱心徽章/品质徽章”这类小图标可以 PNG→`.sprite`；“掉落光柱/地面环/头顶发光字/动态粒子”要按 VFX 资源链做，不能只封一个 sprite。
 
+### 10.3 烤进 sprite 的外语文字怎么改（帮助图 / 仓库页签配方）
+
+> 🔬 实战：韩服帮助界面 `panel/helpMaster.sprite`（3841×2161 符文之语公式图）、仓库扩展页签配方区。最初以为是字符串没翻译，实际字符串 zhCN 零外语，文字是画在图上的。
+
+1. **先确认是图不是字符串**：扫全部 strings 的 zhCN 找外语；找不到，就把 UI sprite 批量解码拼成缩略图人工看。
+2. **定位行不靠 OCR**：帮助面板布局里每行通常叠着一个透明按钮，按钮的 `tooltipString` key（如 `helpRunewordSpirit`）就是这一行的内容 → 直接知道每行是哪个符文之语。按钮 y 坐标对应图上行的 y。
+3. **擦字**：
+   - 透明底的图：把文字区 alpha 置 0。
+   - 石纹底的图：按行取暗像素中位数回填底色 + 轻噪点。
+   - 按像素颜色找边界（灰色"Lv" 结束位置、第一个橙色符文开始位置），只擦文字区，保留图标。
+4. **重画**：Pillow 画中文，颜色取原图同位置字色；同一列统一左对齐；放不下时逐级缩字号。数据（符文顺序、需求等级、配方）从 excel 取，别手写。
+5. **一定从原图备份渲染**（`*.pre_xx_bak`），脚本可重复跑；lowend 版按原 lowend 尺寸缩放生成。
+6. **做繁体版**：不改画图代码，在 `ImageDraw.text/textlength` 这一层包一层转换函数（s2t）再画，量宽和画字同时转换，排版自动一致。
+7. 注意 `tw2s` 会把"鍊甲"转成"炼甲"，画装备名前先替换成"鏈"。
+
 ---
 
 ## 11. 字体与图标内嵌
@@ -365,3 +380,36 @@ data/hd/roomtiles/<tile名>.json        ← 按"楼梯所在房间块"名字逐�
 - **色号→语义映射是 mod 专属设计**，不同包同一色号含义不同，移植时勿混搬。
 - 粒子光柱型信标（MDK lightguider）可与 decal 环并用。
 - ⚠️ 移植坑：①预设引用的原版资产可能已被国服和谐删除，必须随预设同梱；②种子文件"已存在→跳过"会挡掉加强版，需 FORCE 列表。
+
+### 16.1 porory 色库对照与配色建议（📐 原作 `비콘_텍스쳐_템플릿.png`）
+
+- **c00-c19 实际颜色**：c00 黑、c01 灰、c02 暗红、c03 红、c04 橙、c05 黄、c06 绿、c07 天蓝、c08 蓝、c09 紫、c10 白、c11 浅灰、c12 棕、c13 粉、c14 金、c15 米、c16 黄绿、c17 浅青、c18 灰蓝、c19 淡紫。
+- **s00-s07** 是同心圆线宽，s00 最细、s07 最粗；**o25/o50/o75/o100** 是不透明度。
+- 用户反馈"颜色太重挡画面"的配置是 s07 + o75/o100。实用建议：**中等线宽 s03 + o50**，区域边界这类高频信标用 o25。
+- 分类建议：上下楼**成对且不同色**（如下楼红、上楼绿），小站、区域边界、任务、Boss、宝箱、洞穴、古墓、下水道、神殿副本、特殊路线（如憎恨囚牢）各一色，别让同色承担两种意思。
+- **补上楼 tile 用原版做底**：从 CASC 提取原版 `roomtiles/*_up.json` 再挂信标实体，不要直接抄别的 mod 改过的 tile（它可能换了悬停光柱等）。
+
+### 16.2 小站预设里的沿路指引（不在 roomtiles）
+
+- 苦痛大厅（尼拉塞克神殿）小站 → 沃特大厅的**沿路直线**，挂在小站房间预设 `data/hd/env/preset/expansion/wildtemple/temp{ne,nw,se,sw}way.json` 的实体里，不在 roomtiles。只修 roomtiles 会漏。
+- MDK 只给 ne/sw 两种布局加了直线（`mdkmod/beacon/pf_beacon_test.json`）；JGMod 发光箭头覆盖 nw/se/sw，两者可并存。
+- 同类"小站预设注入箭头"还用于：墓穴 2 层小站（`act1/catacomb/cat{e,n,s,w}way.json`）、憎恨囚牢 2 层（`act3/travincal/meph{e,n,s,w}warp.json`，注意不是 `mephnwwarp`）、火焰之河（`act4/diab/bridge1-4.json` 挂 prefab）、世界之石要塞 2 层（`expansion/baallair/baal{e,n,s,w}way.json`）。
+- 方向箭头贴图 `data/hd/directionarrows/textures/directionarrows_{0045,0135,0225,0315}.texture` 是**全局**的，替换会影响所有出口方向箭头。
+
+### 16.3 跑别人的 D2RMM `mod.js` 做合并（Node 垫片）
+
+D2RMM mod 的逻辑写在 `mod.js` 里（按条件插实体、复制资源）。与其手工翻译成脚本，不如用 Node 提供一个假的 `D2RMM` 对象直接执行，逻辑和作者完全一致：
+
+```js
+const D2RMM = {
+  readJson(rel)  { /* 优先读暂存 → 你的 mod 现状 → CASC 原版提取件；去注释/尾逗号后 JSON.parse */ },
+  writeJson(rel, data) { /* 写到暂存目录 */ },
+  copyFile(src, dst)   { /* fs.cpSync 到暂存目录 */ },
+  getConfigJSON() { return {}; },
+};
+new Function('D2RMM', 'config', 'console', fs.readFileSync('mod.js', 'utf8'))(D2RMM, {}, console);
+```
+
+- 去注释时只去整行 `//`，别把 JSON 字符串里的 URL 截断。
+- 写入目标前再做一次校验：json 可解析、你原有的实体没被删、新引用资源存在。
+- 好的 mod.js 会"先删自己插过的实体再插"，重复跑安全；没有这层逻辑的要自己加去重。

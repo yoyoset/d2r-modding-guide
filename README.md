@@ -31,7 +31,7 @@ D2R mod 看似改几个 json，实则有一堆"凭直觉必翻车"的坑：改�
 | [`07_ui_layouts_and_overlays.md`](07_ui_layouts_and_overlays.md) | **UI 手册**：面板注册真相 + 消息路由 + Widget/Panel + 信息展示 + 覆盖特效 + 多 mod 兼容 | 改面板/HUD/加按钮/做特效时 |
 | [`08_new_mod_skeleton.md`](08_new_mod_skeleton.md) | **从零搭建**：目录/modinfo/版本/启动/字符串/面板自动注册/验证清单 | 起一个全新 mod 时 |
 | [`09_game_mechanics_reference.md`](09_game_mechanics_reference.md) | 游戏机制参考：FCR/FHR 断点 + 打孔 + 超强 + CB/DS/破免（支撑染色/平衡决策）| 做 loot 染色/平衡/词典时 |
-| [`05_rotw_dlc_reference.md`](05_rotw_dlc_reference.md) | 2026《术士君临》DLC 事实参考（新职业/符文之语/魔典） | 适配新版本时 |
+| [`05_rotw_dlc_reference.md`](05_rotw_dlc_reference.md) | 2026《术士君临》DLC 事实参考（新职业/符文之语/魔典 + 如何区分天梯季与 DLC 新增 + 破免板潜伏/新生公式 + 官方简繁名） | 适配新版本时 |
 | [`tools/`](tools/) | 可复用脚本（路径需自填） | 自动化提取/校验 |
 
 ---

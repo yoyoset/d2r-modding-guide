@@ -64,6 +64,8 @@
 | Excel TXT（视觉类 states/overlay/sounds） | `data/global/excel/*.txt` | ✅ **在线可用** |
 | Excel TXT（数值类 伤害/掉率/属性） | 同上 | ⚠️ 技术可用，但**改公平性=TOS 封号风险** |
 | 环境模型 | `data/hd/env/model/**/*.model` | ✅ 安全 |
+| 环境模型**置空**（如去四幕火焰之河岩浆：`env/model/act4/lava/act4_lava_river_flow/*.model` 写 0 字节） | 同上 | ✅ 可用；⚠️ **同目录 `.physics` 绝不能置空**，否则一进该区域就闪退。文件清单按本机 CASC 枚举生成，别信旧包 |
+| 带和谐资产的 buff overlay（如骨甲 `overlays/necro/bonearmor_front.json` 引用 `lit_mesh/bonearmor`） | `data/hd/overlays/**` | ❌ 原样搬 = DeviceLost。国服版只保留图标实体、删掉骨甲模型特效实体和依赖；国际服可用完整版 |
 | **角色模型(二进制网格)** | `data/hd/character/**/*.model` | ❌ 结构性禁止（真正硬禁） |
 | 角色/敌人/佣兵**实体 json**（不含 .model） | `data/hd/character/{enemy,npc}/*.json` | ✅ 安全（JCY ship 131+6 个，0 .model） |
 | 佣兵**数值 excel** | `data/global/excel/act*hire.json` | ❌ 国服禁（启动~20s崩，同 .model 类） |
@@ -164,7 +166,28 @@
 
 ---
 
-## 7. 排查顺序速记
+## 7. 同一个 mod 出国服 / 国际服双版本（分线清单）
+
+推荐做法：**国服版当主线**（开发和实装目录只放国服安全版本），国际服版由脚本从国服版生成，两服处理方式不同的内容集中写在一个函数里，别散在各处。
+
+| 内容 | 国服版 | 国际服版 |
+| --- | --- | --- |
+| 骷髅等 key 级和谐名 | `misc.txt` namestr 重定向到表外 Key（§4） | 不需要：删 misc.txt 改动，名字写回原 Key |
+| 引用和谐资产的特效（骨甲 buff 等） | 只留安全实体（图标） | 原版完整文件 |
+| `dataversionbuild.txt` | 国服当前号 | 国际服当前号（同一时期可能不同，见 03 §3.2） |
+| 简繁 | `zhCN` | `zhTW`（可由 zhCN 字符级转繁，见下） |
+| 字体 | 替换主字体 `blizzardglobal-v5_81.ttf` | **繁中模式另读 `blizzardglobaltcunicode.ttf`**，只换主字体繁体下不生效；要么同样替换 TC 字体，要么给原版 TC 字体补图标字形 |
+| 烤进贴图的文字（帮助图、仓库页签配方） | 简体 | 按繁体重画（见 07 §10.3） |
+
+繁中转换经验：
+- 想保留大陆用语时用 OpenCC `s2t`（纯字形转换）；`s2twp` 会换成台湾词汇。
+- 专有名词单独映射（例：DLC 官方繁中名"術士軍臨"，s2t 只能得到"術士君臨"）。
+- 自定义中文字体做繁体前先查字形：用 Big5 常用字表（5401 字）逐字检查 cmap 且轮廓数 >0。某圆体实测常用字只缺 49 个生僻字，mod 自己用到的字里只有"柺"是空字形（改成"拐"）。
+- 图标字形可能在图标字体（kodia）里，覆盖检查要按"主字体 → kodia"的 fallback 链查，只查单个字体会误报。
+
+---
+
+## 8. 排查顺序速记
 - 卡读取 → 查版本号 → texture_desc_cache → `.model` 文件 / `excel/act*hire.json`（**非** character 实体 json）
 - 20s 无日志崩 → 查字符串缺 id
 - 进游戏 DeviceLost → blz-log 找 `Mesh vertex format invalid` → 删引用和谐资产的 JSON
