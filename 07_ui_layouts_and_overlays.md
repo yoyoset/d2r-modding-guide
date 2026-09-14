@@ -214,6 +214,13 @@ Path("target.sprite").write_bytes(header + canvas.tobytes())
 6. **做繁体版**：不改画图代码，在 `ImageDraw.text/textlength` 这一层包一层转换函数（s2t）再画，量宽和画字同时转换，排版自动一致。
 7. 注意 `tw2s` 会把"鍊甲"转成"炼甲"，画装备名前先替换成"鏈"。
 
+**帮助面板按钮 tooltip 的占位文字**：外语整合包的帮助按钮 tooltip 常常只有 enUS 有内容，zhCN 是占位（如"物品栏""test"）。按 enUS 批量翻译时容易踩的坑：
+- enUS 里色码夹在词中间（`[ÿc9*if Maximum of multiple Affiex ÿc0]`），术语表要对**去色码后的文本**匹配，翻完再补标题色。
+- 顺序：**先跑整句/长术语，再跑物品/技能名表**。名字表里有 `Attack`、`Poison`、`Cold` 这类泛词，先跑会把 "Attack Rating"、"Cold Immunity is Sundered" 拆碎。
+- 单词术语要防误伤：`Run → 跑速` 会把底材 "Runic Talons" 吃成"跑速ic Talons"，改成带上下文的 `+7Run`。
+- 你的 mod 可能改过物品 enUS（如 `=Mage Plate [T3]=`），拿 enUS 反查中文名前先规范化；中文名里的图标前缀要去掉。
+- 翻完断言"不残留英文单词"再写入；原作者 enUS 自身也可能有错（例：第二个 `[Helm]` 实际是盾牌表），按内容判断。
+
 ---
 
 ## 11. 字体与图标内嵌

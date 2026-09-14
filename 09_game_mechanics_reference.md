@@ -59,6 +59,7 @@ D2R 引擎 25fps，动作按帧计算，**只有达到断点才减 1 帧，溢�
 ## 4.5 物品自带描述行（spelldesc）机制 —— 给物品 tooltip 加自定义文字的边界
 
 - `spelldesc`（misc.txt 列）**只对 misc 类物品生效**，且**按基础 code 共享**——同一 code 的所有实例显示同一行，无法区分暗金/普通。
+- **反过来，每颗 code 都不同的 misc 物品正好能逐个挂描述**：符文 `r01..r33`、钥匙、精华、世界石碎片等。写法同原版方块/钥匙：`spelldesc=1`、`spelldescstr=<字符串 key>`（`spelldescstr2` 手柄文案、`spelldesccolor` 可空，色码直接写在文案里），文案放 `item-modifiers.json` 新 key（自定义 id，查全局碰撞）。实例：给 33 颗符文各挂两行升级公式，比写进名字串干净（地面标签不变长）。代价：要随 mod 带 misc.txt。
 - 想给**暗金/绿装/护甲**做 *per-item* 的 tooltip 描述行，文件层唯一路线是**自定义 stat**：uniqueitems/setitems 的空 prop 槽 + ItemStatCost.txt 新 stat + properties.txt 新词缀。**改动这些 excel 有在线合规风险**，必须离线单物品试点先验。
 - **零风险替代**：把信息写进**名字字符串的第 2 行**（item-names 多行名）。名字实时查表 → 改完即生效、旧物品也更新、不动 excel。代价：地面拾取标签同样变多行（注意 04 §1.1 的渗色铁律）。
 
