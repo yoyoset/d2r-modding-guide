@@ -24,7 +24,7 @@ D2R mod 看似改几个 json，实则有一堆"凭直觉必翻车"的坑：改�
 | 文档 | 内容 | 何时读 |
 | --- | --- | --- |
 | [`01_mod_anatomy.md`](01_mod_anatomy.md) | **Mod 全景图**：三层结构(文本/UI/美术) + 读取顺序 + 客户需求→文件映射 | 接手任何 mod 第一篇 |
-| [`02_golden_rules.md`](02_golden_rules.md) | **铁律**：CN 读取优先级 + 防闪退三故障模式 + 简中字段(zhCN) | 动手改之前必读 |
+| [`02_golden_rules.md`](02_golden_rules.md) | **铁律**：CN 读取优先级（含 `chinese-overlay.json` 同 id 覆盖层）+ 防闪退三故障模式 + 简中字段(zhCN) | 动手改之前必读 |
 | [`03_data_sop_and_codes.md`](03_data_sop_and_codes.md) | **标准数据获取流程** + 物品代码/ID 参考 + 反直觉怪癖 | 要改名/加条目时 |
 | [`04_styling_colors_symbols.md`](04_styling_colors_symbols.md) | 颜色语义表 + 字体安全符号 + 描述染色/星级方法 + 怪物精英高亮 palette | 做 loot 染色/tooltip 美化/精英怪辨识时 |
 | [`06_china_server_and_crash_safety.md`](06_china_server_and_crash_safety.md) | **国服完全指南**：locale + 和谐 + 三大故障模式 + 文件安全表 + 国际→国服转换 SOP | 做国服 mod / 排查闪退时 |
@@ -38,7 +38,7 @@ D2R mod 看似改几个 json，实则有一堆"凭直觉必翻车"的坑：改�
 
 ## 三条最重要的铁律（先记住这个）
 
-1. **改对文件**：CN 客户端不同显示内容读不同文件——名字可能走 `bnet.json`、描述走 `item-modifiers.json`、其余走 `item-names.json`。改错文件 = 白改。（详见 `02`）
+1. **改对文件**：CN 客户端不同显示内容读不同文件——名字可能走 `bnet.json`、描述走 `item-modifiers.json`、其余走 `item-names.json`。改错文件 = 白改。另外国服还有一张 **`chinese-overlay.json`（119 条）会按 id 覆盖上述同 Key 条目**，改了不生效时先查它（详见 `02` §1.1）。
 2. **绝不猜代码/ID**：物品代码反直觉（如无瑕宝石多数是 `gl*` 不是 `gz*`）；缺 `id` 字段会让游戏启动 ~20 秒后无日志闪退。永远从权威源 grep+提取。（详见 `03`）
 3. **每条字符串必须带 `id`，简中写 `zhCN`**：国服客户端读 `zhCN`（旧说"必须 sgCN/bnCN 三字段"已实证翻案——原版数据无此字段，JCY/MDK/ComG 均不带照常运行；仅继承 SU 系文件时需把已存在的 sgCN/bnCN 旧值一并改掉）。（详见 `02`/`06`）
 

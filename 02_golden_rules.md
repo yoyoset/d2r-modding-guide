@@ -14,6 +14,7 @@ D2R **国服(bnCN)客户端**对同一物品的不同部分，读取来源文件
 | 部分宝石名 | `bnet.json` | 有些宝石**只在** bnet.json，item-names 里没有 |
 | **物品品质标签**（精良/Superior 等） | **`bnet.json`** | bnet 同名 key 会**抢显示**，覆盖 item-nameaffixes |
 | 装备 tooltip **属性描述** | **`item-modifiers.json`** | 改此文件即生效（参考 mod「Colored Item Descriptions」） |
+| **同 id 字符串的最终覆盖层（国服）** | **`chinese-overlay.json`** | 实测 119 条，运行时按 id 压过 item-names / monsters / skills / levels / item-nameaffixes / ui；见 §1.1 |
 
 ### 验证过的反直觉点
 - **CN 确实会读 `item-names.json`**（标准紫宝石 gsv、无瑕黄 gly 都从这里正常显示）。"改 item-names 没用"这种一刀切说法**不成立**。
@@ -22,6 +23,17 @@ D2R **国服(bnCN)客户端**对同一物品的不同部分，读取来源文件
 
 > 经验法则：拿不准时，**名字类两文件都写**（item-names + bnet），描述类只改 item-modifiers。最终以进游戏验证为准。
 > 多行名字串（loot filter 装饰/注解行）有**反序渲染渗色**问题：每行行首必须自带色码 + 串尾 `ÿc0` 封口，否则暗金名会被行尾悬空色码染黄/染灰。详见 `04` §1.1。
+
+### 1.1 同 id 覆盖层 `chinese-overlay.json`（2026-11-21 实证）
+
+国服 CASC 的 `data/local/lng/strings/` 里**还有一张 `chinese-overlay.json`**（实测 **119 条**，标准 14 语言字段）。它的条目 id 与 `item-names` / `monsters` / `skills` / `levels` / `item-nameaffixes` / `ui` 里的条目**相同**，运行时**后加载、按 id 覆盖**。
+
+- **症状**：你在 `item-names.json` 明明写了带颜色/标注的名字，游戏里却显示一个"裸名"（没有第二行标注、没有徽章），或怪物/技能/地名显示的是另一套译名。**不是"改错文件"，是被 overlay 顶掉了。**
+- **实测例子**：同一件底材在 `item-names` 里是带档次的完整名，游戏内却显示 overlay 的裸名；骷髅（overlay 写作"石英"）、怪物、骨系技能、地图名也有整批同款现象。
+- **改 mod 时**：只要你的 mod 覆盖了 overlay 里出现的 Key，就必须**同时提供 `strings/chinese-overlay.json`**，否则 overlay 的旧值会盖掉你的值。
+- **正确做法**：从国服原版 CASC 提取该文件作骨架（119 条一条不少）→ 把与你自己字符串**同 Key** 的 `zhCN`（及 `zhTW`）换成你的当前值 → 同路径放进 mod。字符串文件是**整文件覆盖、不是合并**，骨架必须抄全。
+- **不要只写 `[]`**：overlay 里约 20 条（墓地/石堆/任务卷轴/伯爵台词等）只存在于该文件，清空会让这些文字回退成英文/Key。
+- 证据级：✅ 国服 CASC 原版提取（`Data:osi`）+ 游戏内显示对照。
 
 ---
 

@@ -34,6 +34,8 @@
 | `ui.json` | 界面文字、按钮、悬浮提示 |
 | `monsters.json` 等 | 怪物名等（按 mod 而定） |
 
+> 国服 `strings/` 里还有一张 **`chinese-overlay.json`**（实测 119 条）：它与上面多张表**同 id**，运行时按 id 覆盖。mod 不带它时原版 overlay 生效；带了就是整份替换。详见 `02` §1.1 / `06` §1.1。
+
 ### 第二层：UI 层 `data/global/ui/layouts/*.json`
 所有"界面/交互"：HUD、面板、按钮、消息路由。
 
